@@ -9,13 +9,14 @@ package synapse
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/gofrs/uuid"
-	"net/http"
 )
 
 // The package's fully qualified name.
@@ -1379,8 +1380,11 @@ func (dwuap DataWarehouseUserActivitiesProperties) MarshalJSON() ([]byte, error)
 
 // DynamicExecutorAllocation dynamic Executor Allocation Properties
 type DynamicExecutorAllocation struct {
+
 	// Enabled - Indicates whether Dynamic Executor Allocation is enabled or not.
-	Enabled *bool `json:"enabled,omitempty"`
+	Enabled          *bool  `json:"enabled,omitempty"`
+	MinExecutorCount *int64 `json:"minExecutors, omitempty"`
+	MaxExecutorCount *int64 `json:"maxExecutors, omitempty"`
 }
 
 // EncryptionDetails details of the encryption associated with the workspace

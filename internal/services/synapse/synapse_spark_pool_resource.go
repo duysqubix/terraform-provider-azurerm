@@ -85,10 +85,28 @@ func resourceSynapseSparkPool() *pluginsdk.Resource {
 				Default:  false,
 			},
 
-			"dynamic_executor_allocation_enabled": {
-				Type:     pluginsdk.TypeBool,
+			"dynamic_executor_allocation": {
+				Type:     pluginsdk.TypeList,
 				Optional: true,
-				Default:  false,
+				Elem: &pluginsdk.Resource{
+					Schema: map[string]*pluginsdk.Schema{
+						"enabled": {
+							Type:     pluginsdk.TypeBool,
+							Optional: true,
+							Default:  false,
+						},
+						"min_executor_count": {
+							Type:     pluginsdk.TypeInt,
+							Required: false,
+							Default:  -1,
+						},
+						"max_executor_count": {
+							Type:     pluginsdk.TypeInt,
+							Required: false,
+							Default:  -1,
+						},
+					},
+				},
 			},
 
 			"node_count": {
@@ -246,9 +264,10 @@ func resourceSynapseSparkPoolCreate(d *pluginsdk.ResourceData, meta interface{})
 			AutoScale:                 autoScale,
 			CacheSize:                 utils.Int32(int32(d.Get("cache_size").(int))),
 			IsComputeIsolationEnabled: utils.Bool(d.Get("compute_isolation_enabled").(bool)),
-			DynamicExecutorAllocation: &synapse.DynamicExecutorAllocation{
-				Enabled: utils.Bool(d.Get("dynamic_executor_allocation_enabled").(bool)),
-			},
+			//DynamicExecutorAllocation: &synapse.DynamicExecutorAllocation{
+			//	Enabled: utils.Bool(d.Get("dynamic_executor_allocation_enabled").(bool)),
+			//},
+			DynamicExecutorAllocation:   expandArmSparkPoolDynamicExecutorAllocation(d.Get("dynamic_executor_allocation").([]interface{})),
 			DefaultSparkLogFolder:       utils.String(d.Get("spark_log_folder").(string)),
 			NodeSize:                    synapse.NodeSize(d.Get("node_size").(string)),
 			NodeSizeFamily:              synapse.NodeSizeFamily(d.Get("node_size_family").(string)),
@@ -309,17 +328,20 @@ func resourceSynapseSparkPoolRead(d *pluginsdk.ResourceData, meta interface{}) e
 		if err := d.Set("auto_scale", flattenArmSparkPoolAutoScaleProperties(props.AutoScale)); err != nil {
 			return fmt.Errorf("setting `auto_scale`: %+v", err)
 		}
+		if err := d.Set("dynamic_executor_allocation", flattenArmSparkPoolDynamicExecutorAllocation(props.DynamicExecutorAllocation)); err != nil {
+			return fmt.Errorf("setting `dynamic_executor_allocation`: %+v", err)
+		}
 		if err := d.Set("library_requirement", flattenArmSparkPoolLibraryRequirements(props.LibraryRequirements)); err != nil {
 			return fmt.Errorf("setting `library_requirement`: %+v", err)
 		}
 		d.Set("cache_size", props.CacheSize)
 		d.Set("compute_isolation_enabled", props.IsComputeIsolationEnabled)
 
-		dynamicExecutorAllocationEnabled := false
-		if props.DynamicExecutorAllocation != nil {
-			dynamicExecutorAllocationEnabled = *props.DynamicExecutorAllocation.Enabled
-		}
-		d.Set("dynamic_executor_allocation_enabled", dynamicExecutorAllocationEnabled)
+		//dynamicExecutorAllocationEnabled := false
+		//if props.DynamicExecutorAllocation != nil {
+		//	dynamicExecutorAllocationEnabled = *props.DynamicExecutorAllocation.Enabled
+		//}
+		//d.Set("dynamic_executor_allocation_enabled", dynamicExecutorAllocationEnabled)
 
 		d.Set("node_count", props.NodeCount)
 		d.Set("node_size", props.NodeSize)
@@ -355,10 +377,11 @@ func resourceSynapseSparkPoolUpdate(d *pluginsdk.ResourceData, meta interface{})
 			AutoScale:                 autoScale,
 			CacheSize:                 utils.Int32(int32(d.Get("cache_size").(int))),
 			IsComputeIsolationEnabled: utils.Bool(d.Get("compute_isolation_enabled").(bool)),
-			DynamicExecutorAllocation: &synapse.DynamicExecutorAllocation{
-				Enabled: utils.Bool(d.Get("dynamic_executor_allocation_enabled").(bool)),
-			},
+			//DynamicExecutorAllocation: &synapse.DynamicExecutorAllocation{
+			//	Enabled: utils.Bool(d.Get("dynamic_executor_allocation_enabled").(bool)),
+			//},
 			DefaultSparkLogFolder:       utils.String(d.Get("spark_log_folder").(string)),
+			DynamicExecutorAllocation:   expandArmSparkPoolDynamicExecutorAllocation(d.Get("dynamic_executor_allocation").([]interface{})),
 			LibraryRequirements:         expandArmSparkPoolLibraryRequirements(d.Get("library_requirement").([]interface{})),
 			NodeSize:                    synapse.NodeSize(d.Get("node_size").(string)),
 			NodeSizeFamily:              synapse.NodeSizeFamily(d.Get("node_size_family").(string)),
@@ -435,6 +458,22 @@ func expandArmSparkPoolAutoScaleProperties(input []interface{}) *synapse.AutoSca
 	}
 }
 
+func expandArmSparkPoolDynamicExecutorAllocation(input []interface{}) *synapse.DynamicExecutorAllocation {
+	if len(input) == 0 || input[0] == nil {
+		return &synapse.DynamicExecutorAllocation{
+			Enabled:          utils.Bool(false),
+			MinExecutorCount: utils.Int64(1),
+			MaxExecutorCount: utils.Int64(4),
+		}
+	}
+	v := input[0].(map[string]interface{})
+	return &synapse.DynamicExecutorAllocation{
+		Enabled:          utils.Bool(v["enabled"].(bool)),
+		MinExecutorCount: utils.Int64(v["minExecutorCount"].(int64)),
+		MaxExecutorCount: utils.Int64(v["maxExecutorCount"].(int64)),
+	}
+}
+
 func expandArmSparkPoolLibraryRequirements(input []interface{}) *synapse.LibraryRequirements {
 	if len(input) == 0 || input[0] == nil {
 		return nil
@@ -482,6 +521,7 @@ func flattenArmSparkPoolAutoPauseProperties(input *synapse.AutoPauseProperties) 
 	}
 }
 
+func flattenArmSparkPoolDynamicExecutorAllocation(input *synapse.Dyn)
 func flattenArmSparkPoolAutoScaleProperties(input *synapse.AutoScaleProperties) []interface{} {
 	if input == nil {
 		return make([]interface{}, 0)
